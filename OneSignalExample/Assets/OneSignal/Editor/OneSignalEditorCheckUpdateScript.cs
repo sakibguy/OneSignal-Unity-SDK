@@ -32,22 +32,14 @@ using UnityEngine.Networking;
 using OneSignalPush.MiniJSON;
 using System.Collections;
 
-#if !UNITY_CLOUD_BUILD && UNITY_EDITOR && UNITY_2017_1_OR_NEWER
-
-[InitializeOnLoad]
-public class OneSignalEditorCheckUpdateScript : AssetPostprocessor
+internal class OneSignalEditorCheckUpdateScript
 {
    //this key is used for the current unity session only
    public static string sessionState = "onesignal_checked_update";
 
    static OneSignalUpdateRequest request;
 
-   static OneSignalEditorCheckUpdateScript()
-   {
-      Request();
-   }
-
-   static void Request()
+   internal static void Request()
    {
       //if the SDK already checked for an update during this session, no need to do so again
       if (SessionState.GetBool(sessionState, false)) {
@@ -86,8 +78,18 @@ public class OneSignalUpdateRequest : MonoBehaviour
       var request = UnityWebRequest.Get(url);
 
       yield return request.SendWebRequest();
-      
-      if (request.isNetworkError || request.isHttpError) {
+
+      #if UNITY_2020_1_OR_NEWER
+         var requestError =
+            request.result == UnityWebRequest.Result.ProtocolError ||
+            request.result == UnityWebRequest.Result.ConnectionError;
+      #else
+         var requestError =
+            request.isNetworkError ||
+            request.isHttpError;
+      #endif
+
+      if (requestError) {
          if (request.error != null) {
             Debug.LogError("OneSignal Update Checker encountered an unknown error");
          } else {
@@ -128,5 +130,3 @@ public class OneSignalUpdateRequest : MonoBehaviour
       yield break;
    }
 }
-
-#endif

@@ -167,7 +167,7 @@ void processInAppMessageClicked(char* inAppMessageActionString) {
 char* createInAppMessageJsonString(OSInAppMessageAction* action) {
     return os_cStringCopy(dictionaryToJsonChar(
     @{
-        @"click_name" : action.clickName,
+        @"click_name" : action.clickName ? action.clickName : @"",
         @"click_url" : action.clickUrl ? action.clickUrl.absoluteString : @"",
         @"first_click" : @(action.firstClick),
         @"closes_message" : @(action.closesMessage)
@@ -438,6 +438,24 @@ void _setExternalUserId(const char* delegate, const char *externalId) {
         NSString* response = dictionaryToNSString(results);
         NSDictionary* data = @{ @"delegate_id" : delegateId, @"response" : response };
         UnitySendMessage(unityListener, "onExternalUserIdUpdateCompletion", dictionaryToJsonChar(data));
+    }];
+}
+
+void _setExternalUserIdWithAuthToken(const char* delegateSuccess, const char* delegateFailure, const char *externalId, const char *authHashToken) {
+    NSString* delegateIdSuccess = CreateNSString(delegateSuccess);
+    NSString* delegateIdFailure = CreateNSString(delegateFailure);
+    
+    NSString* delegate = dictionaryToNSString(@{ @"success" : delegateIdSuccess, @"failure" : delegateIdFailure });
+    
+    [OneSignal setExternalUserId:CreateNSString(externalId) withExternalIdAuthHashToken:CreateNSString(authHashToken) withSuccess:^(NSDictionary *results) {
+        NSString* response = dictionaryToNSString(results);
+        NSDictionary* data = @{ @"delegate_id" : delegate, @"response" : response };
+        UnitySendMessage(unityListener, "onExternalUserIdUpdateCompletion", dictionaryToJsonChar(data));
+    } withFailure: ^(NSError* error) {
+        [OneSignal onesignal_Log:ONE_S_LL_VERBOSE message:[NSString stringWithFormat:@"Set external user id Failure with error: %@", error]];
+        NSString* response = CreateNSString([[OneSignal parseNSErrorAsJsonString:error] UTF8String]);
+        NSDictionary* data = @{ @"delegate_id" : delegate, @"response" : response };
+        UnitySendMessage(unityListener, "onExternalUserIdUpdateCompletionFailure", dictionaryToJsonChar(data));
     }];
 }
 
